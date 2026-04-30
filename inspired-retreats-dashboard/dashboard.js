@@ -1331,6 +1331,7 @@
     const isDiscovery = campaignType.toLowerCase().indexOf("discovery") !== -1;
     const retargetingSummary = isRetargeting ? summarizeRetargetingRows(rows) : null;
     const discoverySummary = isDiscovery ? summarizeDiscoveryRows(rows) : null;
+    const rangeLabel = formatMetaMonthRange(rows);
 
     if (isRetargeting) {
       return [
@@ -1361,16 +1362,16 @@
       '<div class="meta-section" style="margin:26px 0 20px;">',
       renderMetaStageHeader("—", campaignType + " Campaign"),
       '<div class="meta-campaign-table-card"><div class="meta-campaign-table-wrap"><table class="meta-campaign-table">',
-      "<thead><tr><th>Month</th><th>Spend</th><th>Revenue</th><th>ROAS</th><th>Impressions</th><th>Page Visits</th><th>Bookings</th><th>Avg Booking Value</th><th>Cost/Booking</th><th>Cost/Booking %</th></tr></thead>",
+      "<thead><tr><th>Month</th><th>Spend</th><th>Revenue</th><th>ROAS</th><th>Impressions</th><th>Followers</th><th>Page Visits</th><th>Bookings</th><th>Avg Booking Value</th><th>Cost/Booking</th><th>Cost/Booking %</th></tr></thead>",
       "<tbody>",
-      rows.map(renderMetaCampaignTableRow).join(""),
+      rows.map(renderMetaDiscoveryCampaignTableRow).join(""),
       "</tbody></table></div></div>",
       isDiscovery
         ? [
             '<div class="meta-discovery-summary-grid" style="margin-top:18px;">',
             renderMetaCompactSummaryCard("Total impressions", formatCompactNumber(discoverySummary.totalImpressions), formatSignedPercentLabel(discoverySummary.impressionsDelta), discoverySummary.impressionsDelta >= 0 ? "good" : "warn"),
-            renderMetaCompactSummaryCard("Total bookings", formatNumber(discoverySummary.totalBookings), "Selected range", "neutral"),
-            renderMetaCompactSummaryCard("Total page visits", formatCompactNumber(discoverySummary.totalPageVisits), "Selected range", "neutral"),
+            renderMetaCompactSummaryCard("Total followers", formatNumber(discoverySummary.totalFollowers), rangeLabel, "neutral"),
+            renderMetaCompactSummaryCard("Total page visits", formatCompactNumber(discoverySummary.totalPageVisits), rangeLabel, "neutral"),
             "</div>"
           ].join("")
         : "",
@@ -1447,13 +1448,28 @@
     const firstImpressions = firstRow ? numeric(firstRow.impressions) : 0;
     const lastImpressions = lastRow ? numeric(lastRow.impressions) : 0;
     const impressionsDelta = firstImpressions > 0 ? ((lastImpressions - firstImpressions) / firstImpressions) : 0;
+    const totalLeadsFollowers = sumMetric(rows, "leadsFollowers");
 
     return {
       totalImpressions: sumMetric(rows, "impressions"),
+      totalFollowers: totalLeadsFollowers,
+      totalLeadsFollowers: totalLeadsFollowers,
       totalBookings: rows.reduce(function (sum, row) { return sum + totalCampaignBookings(row); }, 0),
       totalPageVisits: sumMetric(rows, "profileVisits"),
       impressionsDelta: impressionsDelta
     };
+  }
+
+  function formatMetaMonthRange(rows) {
+    if (!rows || !rows.length) {
+      return "Selected range";
+    }
+    const firstKey = rows[0].key;
+    const lastKey = rows[rows.length - 1].key;
+    if (firstKey === lastKey) {
+      return formatShortMonthYearKey(firstKey);
+    }
+    return formatShortMonthYearKey(firstKey) + " - " + formatShortMonthYearKey(lastKey);
   }
 
   function formatSignedPercentLabel(value) {
@@ -1475,6 +1491,24 @@
       '<td class="meta-strong">' + escapeHtml(formatCurrency(row.revenue, 0)) + "</td>",
       '<td class="meta-strong">' + escapeHtml(formatMultiple(primaryRoas(row))) + "</td>",
       '<td class="meta-strong">' + escapeHtml(formatNumber(row.impressions)) + "</td>",
+      '<td class="meta-strong">' + escapeHtml(formatNumber(row.profileVisits)) + "</td>",
+      '<td class="meta-strong">' + escapeHtml(formatNullableNumber(totalCampaignBookings(row))) + "</td>",
+      '<td class="meta-strong">' + escapeHtml(formatNullableCurrency(row.avgBookingValue)) + "</td>",
+      '<td class="meta-strong">' + escapeHtml(formatNullableCurrency(row.costPerBooking)) + "</td>",
+      '<td class="meta-strong">' + escapeHtml(formatNullablePercent(row.pctAvgBookingValue)) + "</td>",
+      "</tr>"
+    ].join("");
+  }
+
+  function renderMetaDiscoveryCampaignTableRow(row) {
+    return [
+      "<tr>",
+      '<td><span class="meta-pill month-' + escapeHtml(String(row.monthIndex)) + '">' + escapeHtml(row.shortLabel) + "</span></td>",
+      '<td class="meta-strong">' + escapeHtml(formatCurrency(row.spend, 2)) + "</td>",
+      '<td class="meta-strong">' + escapeHtml(formatCurrency(row.revenue, 0)) + "</td>",
+      '<td class="meta-strong">' + escapeHtml(formatMultiple(primaryRoas(row))) + "</td>",
+      '<td class="meta-strong">' + escapeHtml(formatNumber(row.impressions)) + "</td>",
+      '<td class="meta-strong">' + escapeHtml(formatNullableNumber(row.leadsFollowers)) + "</td>",
       '<td class="meta-strong">' + escapeHtml(formatNumber(row.profileVisits)) + "</td>",
       '<td class="meta-strong">' + escapeHtml(formatNullableNumber(totalCampaignBookings(row))) + "</td>",
       '<td class="meta-strong">' + escapeHtml(formatNullableCurrency(row.avgBookingValue)) + "</td>",
