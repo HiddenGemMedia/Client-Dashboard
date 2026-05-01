@@ -290,11 +290,21 @@
   }
 
   async function fetchPerformanceWorkbook() {
-    const response = await fetch("data/performance-dashboard.json");
-    if (!response.ok) {
-      throw new Error("Could not load the performance workbook data file.");
+    const candidates = [
+      "Data/performance-dashboard.json",
+      "data/performance-dashboard.json",
+      "./Data/performance-dashboard.json",
+      "./data/performance-dashboard.json"
+    ];
+
+    for (let i = 0; i < candidates.length; i += 1) {
+      const response = await fetch(candidates[i]);
+      if (response.ok) {
+        return response.json();
+      }
     }
-    return response.json();
+
+    throw new Error("Could not load the performance workbook data file.");
   }
 
   function getPerformanceClient(slug) {
